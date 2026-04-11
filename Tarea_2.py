@@ -51,10 +51,10 @@ area_seccion_cilindro = np.pi * diametro_estanque * altura_por_sensor  # Área d
 
 # Propiedades agua
 def H_agua(T, V):
-    return V * (T + 273,15) * PropsSI('C', 'T', (T + 273,15), 'Q', 0, 'Water') * PropsSI('D', 'T', (T + 273,15), 'Q', 0, 'Water')
+    return V * (T + 273.15) * PropsSI('C', 'T', (T + 273.15), 'Q', 0, 'Water') * PropsSI('D', 'T', (T + 273.15), 'Q', 0, 'Water')
 
 def H_dot_flow(T,V):
-    return V * (T + 273,15) * PropsSI('C', 'T', (T + 273,15), 'Q', 0, 'Water') * PropsSI('D', 'T', (T + 273,15), 'Q', 0, 'Water')
+    return V * (T + 273.15) * PropsSI('C', 'T', (T + 273.15), 'Q', 0, 'Water') * PropsSI('D', 'T', (T + 273.15), 'Q', 0, 'Water')
 
 
 
