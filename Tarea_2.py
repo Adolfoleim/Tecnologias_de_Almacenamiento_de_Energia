@@ -35,8 +35,8 @@ k_1 = 0.038 # W/(m * °C)
 volumen_estanque = np.pi * (diametro_estanque / 2) ** 2 * altura_estanque
 
 # Propiedades por sensor
-volumen_por_sensor = volumen_estanque / cantidad_sensores # volumen de agua por cada sensor
-altura_por_sensor = altura_estanque / cantidad_sensores # Altura por cada sensor
+volumen_por_sensor = volumen_estanque / cantidad_sensores # volumen de agua por cada sensor en m3
+altura_por_sensor = altura_estanque / cantidad_sensores # Altura por cada sensor en metros
 
 # Propiedades de área
 area_tapa = np.pi * (diametro_estanque / 2) ** 2  # Área de la base del estanque en m²
@@ -192,7 +192,7 @@ df['S_hl_store_acumulado'] = df['S_hl_store'].cumsum()
 
 # ERROR y S_gen
 df['Error_H'] = df['H_store'] - df['H_flow_acumulado'] + df['H_hl_store_acumulado']
-df['S_gen'] = df['S_store'] - df['S_flow_acumulado'] + df['S_hl_store_acumulado']
+df['S_gen'] = df['S_store'] - df['S_flow_acumulado'] - df['S_hl_store_acumulado']
 
 # Convertimos el índice a horas (si cada fila es 1 minuto)
 df['tiempo_hrs'] = df.index / 60 
