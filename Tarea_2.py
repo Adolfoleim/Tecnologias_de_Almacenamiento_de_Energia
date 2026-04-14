@@ -183,7 +183,7 @@ def T_mix(T_inf, a, T_anterior, dif_tiempo=60):
 ## Cálculos mix
 
 # Funciones de entalpías y entropías
-def H_store_MIX(T_inicial, T_actual, V, P=101325):
+def H_store_MIX(T_inicial, T_actual, V = volumen_estanque, P=101325):
     
     rho = PropsSI('D', 'T', T_actual + 273.15, 'P', P, 'Water')
     h = PropsSI('H', 'T', T_actual + 273.15, 'P', P, 'Water')
@@ -196,7 +196,7 @@ def H_store_MIX(T_inicial, T_actual, V, P=101325):
     
     return h_total_actual - h_total_inicial
     
-def S_store_MIX(T_inicial, T_actual, V, P=101325):
+def S_store_MIX(T_inicial, T_actual, V = volumen_estanque, P=101325):
     rho = PropsSI('D', 'T', T_actual + 273.15, 'P', P, 'Water')
     s = PropsSI('S', 'T', T_actual + 273.15, 'P', P, 'Water')
 
@@ -238,50 +238,61 @@ for i in range(1, len(df)):
     t_mix.append(t_mix_actual)
 
 df['T_mix'] = t_mix
+
+f2 = df.iloc[0]
+## Calculo entropía mix
+
+df['S_store_MIX'] = df.apply(lambda r: S_store_MIX(f2['T_mix'], r['T_mix']) , axis=1)
+
+df['S_flow'] = df.apply(lambda r: S_flow(r['T36'], r['T51'], r['T35'], r['T52'], r['F32'], r['F51'], r['F31'], r['F51']), axis=1 )
+
+df['S_hl_store_MIX'] = df.apply(lambda r: S_hl_store_MIX(UA_total_1, r['T_mix'], r['T_f']), axis=1)
+
 ## Cálculos entalpías
 
-# df['H_store'] = df.apply(lambda r: H_store([ f1['TE1'], f1['TE2'], f1['TE3'], f1['TE4'], f1['TE5'], f1['TE6'],
-#                                            f1['TE7'], f1['TE8'], f1['TE9'], f1['TE10'], f1['TE11'] ],
-#                                            [ r['TE1'], r['TE2'], r['TE3'], r['TE4'], r['TE5'], r['TE6'],
-#                                            r['TE7'], r['TE8'], r['TE9'], r['TE10'], r['TE11'] ], volumen_por_sensor), axis=1 )
+df['H_store'] = df.apply(lambda r: H_store([ f1['TE1'], f1['TE2'], f1['TE3'], f1['TE4'], f1['TE5'], f1['TE6'],
+                                            f1['TE7'], f1['TE8'], f1['TE9'], f1['TE10'], f1['TE11'] ],
+                                            [ r['TE1'], r['TE2'], r['TE3'], r['TE4'], r['TE5'], r['TE6'],
+                                            r['TE7'], r['TE8'], r['TE9'], r['TE10'], r['TE11'] ], volumen_por_sensor), axis=1 )
 
-# df['H_flow'] = df.apply(lambda r: H_flow(r['T36'], r['T51'], r['T35'], r['T52'], r['F32'], r['F51'], r['F31'], r['F51']), axis=1 )
+df['H_flow'] = df.apply(lambda r: H_flow(r['T36'], r['T51'], r['T35'], r['T52'], r['F32'], r['F51'], r['F31'], r['F51']), axis=1 )
 
-# df['H_hl_store'] = df.apply(lambda r: H_hl_store(k_1, espesor_1, area_tapa, diametro_estanque/2, altura_por_sensor, 
-#                                                 r['TE1'], r['TE2'], r['TE3'], r['TE4'], r['TE5'], r['TE6'],
-#                                                 r['TE7'], r['TE8'], r['TE9'], r['TE10'], r['TE11'], r['T_f']), axis=1 )
+df['H_hl_store'] = df.apply(lambda r: H_hl_store(k_1, espesor_1, area_tapa, diametro_estanque/2, altura_por_sensor, 
+                                                 r['TE1'], r['TE2'], r['TE3'], r['TE4'], r['TE5'], r['TE6'],
+                                                 r['TE7'], r['TE8'], r['TE9'], r['TE10'], r['TE11'], r['T_f']), axis=1 )
 
 
 
 ## Cálculos entropías
 
-#df['S_store'] = df.apply(lambda r: S_store([ f1['TE1'], f1['TE2'], f1['TE3'], f1['TE4'], f1['TE5'], f1['TE6'],
-#                                            f1['TE7'], f1['TE8'], f1['TE9'], f1['TE10'], f1['TE11'] ],
-#                                            [ r['TE1'], r['TE2'], r['TE3'], r['TE4'], r['TE5'], r['TE6'],
-#                                            r['TE7'], r['TE8'], r['TE9'], r['TE10'], r['TE11'] ], volumen_por_sensor), axis=1 )
+df['S_store'] = df.apply(lambda r: S_store([ f1['TE1'], f1['TE2'], f1['TE3'], f1['TE4'], f1['TE5'], f1['TE6'],
+                                            f1['TE7'], f1['TE8'], f1['TE9'], f1['TE10'], f1['TE11'] ],
+                                            [ r['TE1'], r['TE2'], r['TE3'], r['TE4'], r['TE5'], r['TE6'],
+                                            r['TE7'], r['TE8'], r['TE9'], r['TE10'], r['TE11'] ], volumen_por_sensor), axis=1 )
 
 #df['S_flow'] = df.apply(lambda r: S_flow(r['T36'], r['T51'], r['T35'], r['T52'], r['F32'], r['F51'], r['F31'], r['F51']), axis=1 )
 
-#df['S_hl_store'] = df.apply(lambda r: S_hl_store(k_1, espesor_1, area_tapa, diametro_estanque/2, altura_por_sensor, 
-#                                                 r['TE1'], r['TE2'], r['TE3'], r['TE4'], r['TE5'], r['TE6'],
-#                                                 r['TE7'], r['TE8'], r['TE9'], r['TE10'], r['TE11'], r['T_f']), axis=1 )
+df['S_hl_store'] = df.apply(lambda r: S_hl_store(k_1, espesor_1, area_tapa, diametro_estanque/2, altura_por_sensor, 
+                                                 r['TE1'], r['TE2'], r['TE3'], r['TE4'], r['TE5'], r['TE6'],
+                                                 r['TE7'], r['TE8'], r['TE9'], r['TE10'], r['TE11'], r['T_f']), axis=1 )
 
 
 
 ## Acumulado de flujo (flow) y pérdidas de calor (hl) en entalpía y entropía
 
-#df['H_flow_acumulado'] = df['H_flow'].cumsum()
-#df['H_hl_store_acumulado'] = df['H_hl_store'].cumsum()
+df['H_flow_acumulado'] = df['H_flow'].cumsum()
+df['H_hl_store_acumulado'] = df['H_hl_store'].cumsum()
 
-#df['S_flow_acumulado'] = df['S_flow'].cumsum()
-#df['S_hl_store_acumulado'] = df['S_hl_store'].cumsum()
+df['S_flow_acumulado'] = df['S_flow'].cumsum()
+df['S_hl_store_acumulado'] = df['S_hl_store'].cumsum()
 
+df['S_hl_store_MIX_acumulado'] = df['S_hl_store_MIX'].cumsum()
 # ERROR y S_gen
 #df['Error_H'] = df['H_store'] - df['H_flow_acumulado'] + df['H_hl_store_acumulado']
 #df['S_gen'] = df['S_store'] - df['S_flow_acumulado'] - df['S_hl_store_acumulado']
 
 # Convertimos el índice a horas (si cada fila es 1 minuto)
-#df['tiempo_hrs'] = df.index / 60 
+df['tiempo_hrs'] = df.index / 60 
 
 # Convertimos a MegaJoules (MJ) para mejor escala [cite: 553]
 #df['H_store_MJ'] = df['H_store'] / 1e6
@@ -343,7 +354,6 @@ ruta_salida = directorio_script / 'datos_procesados_estanque.csv'
 df.to_csv(ruta_salida, 
           sep=';',           # Separador de columnas
           decimal=',',       # Separador de decimales (estándar chileno/Excel)
-          index=False,       # Para no guardar la columna de índices (0, 1, 2...)
           encoding='latin-1' # Para que Excel reconozca bien los caracteres
 )
 
