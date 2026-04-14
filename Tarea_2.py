@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 directorio_script = Path(__file__).parent
 
 # Une esa ruta con el nombre de tu archivo CSV
-ruta_csv = directorio_script / 'datos_procesados_estanque.csv'
+ruta_csv = directorio_script / 'datos_procesados_estanque_2.csv'
 
 # Lee el archivo usando la ruta absoluta que acabamos de construir
 df = pd.read_csv(ruta_csv, encoding='latin-1', sep=';', decimal=',')
@@ -220,50 +220,49 @@ def S_hl_store_MIX(UA, t_s, t_amb):
     h_hl = -( UA*(t_s - t_amb)/(t_s + 273.15) ) 
     return ( h_hl ) * 60 # El 60 es el tiempo, y considera 1 minuto = 60 segundos ya que UA está en J /(s*K)
 
-# Cálculos mix
+### Cálculos mix
 
-df['C_flow_i1'] = df.apply(lambda r: C_flow(r['T36'], r['T35'], r['F32']), axis=1)
-df['C_flow_i2'] = df.apply(lambda r: C_flow(r['T51'], r['T52'], r['F51']), axis=1)
+#df['C_flow_i1'] = df.apply(lambda r: C_flow(r['T36'], r['T35'], r['F32']), axis=1)
+#df['C_flow_i2'] = df.apply(lambda r: C_flow(r['T51'], r['T52'], r['F51']), axis=1)
 
-df['a_val'] = df.apply(lambda r: a_cte(UA_total_1, r['C_flow_i1'], r['C_flow_i2']), axis=1)
+#df['a_val'] = df.apply(lambda r: a_cte(UA_total_1, r['C_flow_i1'], r['C_flow_i2']), axis=1)
 
-df['t_inf_val'] = df.apply(lambda r: T_inf(UA_total_1, r['C_flow_i1'], r['C_flow_i2'], r['T36'], r['T51'], r['T_f']), axis=1)
+#df['t_inf_val'] = df.apply(lambda r: T_inf(UA_total_1, r['C_flow_i1'], r['C_flow_i2'], r['T36'], r['T51'], r['T_f']), axis=1)
 
-# 2. CONVERSIÓN A NUMPY (Para que vuele)
-# Extraemos los valores calculados como listas nativas de alta velocidad
-t_inf_arr = df['t_inf_val'].values
-a_arr = df['a_val'].values
 
-# 3. EL LOOP RECURSIVO (Ahora sí, solo lo que depende del paso anterior)
-T_init = 37.66
-t_mix = np.zeros(len(df)) # Creamos un array vacío del tamaño del df
-t_mix[0] = T_init
+# Se extraen los valores calculados como listas
+#t_inf_arr = df['t_inf_val'].values
+#a_arr = df['a_val'].values
 
-contador = 0
-for i in range(1, len(df)):
-    t_prev = t_mix[i-1]
+
+#T_init = 37.66
+#t_mix = np.zeros(len(df)) # Creamos un array vacío del tamaño del df
+#t_mix[0] = T_init
+
+#contador = 0
+#for i in range(1, len(df)):
+#    t_prev = t_mix[i-1]
     
-    # Llamamos a tu función solo con los números de esa fila exacta
-    t_mix[i] = T_mix(t_inf_arr[i], a_arr[i], t_prev)
-    contador += 1
-    print(contador)
-# Guardamos el resultado final en el DataFrame
-df['T_mix_1'] = t_mix
+#    t_mix[i] = T_mix(t_inf_arr[i], a_arr[i], t_prev)
+#    contador += 1
+#    print(contador)
 
-f2 = df.iloc[0]
+#df['T_mix_1'] = t_mix
+
+#f2 = df.iloc[0]
 ## Calculo entropía mix
 
-df['S_store_MIX_2'] = df.apply(lambda r: S_store_MIX(f2['T_mix'], r['T_mix']) , axis=1)
+#df['S_store_MIX_2'] = df.apply(lambda r: S_store_MIX(f2['T_mix'], r['T_mix']) , axis=1)
 
 #df['S_flow_2'] = df.apply(lambda r: S_flow(r['T36'], r['T51'], r['T35'], r['T52'], r['F32'], r['F51'], r['F31'], r['F51']), axis=1 )
 
-df['S_hl_store_MIX_2'] = df.apply(lambda r: S_hl_store_MIX(UA_total_2, r['T_mix'], r['T_f']), axis=1)
+#df['S_hl_store_MIX_2'] = df.apply(lambda r: S_hl_store_MIX(UA_total_2, r['T_mix'], r['T_f']), axis=1)
 
-df['S_store_MIX_3'] = df.apply(lambda r: S_store_MIX(f2['T_mix'], r['T_mix']) , axis=1)
+#df['S_store_MIX_3'] = df.apply(lambda r: S_store_MIX(f2['T_mix'], r['T_mix']) , axis=1)
 
 #df['S_flow_3'] = df.apply(lambda r: S_flow(r['T36'], r['T51'], r['T35'], r['T52'], r['F32'], r['F51'], r['F31'], r['F51']), axis=1 )
 
-df['S_hl_store_MIX_3'] = df.apply(lambda r: S_hl_store_MIX(UA_total_2, r['T_mix'], r['T_f']), axis=1)
+#df['S_hl_store_MIX_3'] = df.apply(lambda r: S_hl_store_MIX(UA_total_2, r['T_mix'], r['T_f']), axis=1)
 
 ## Cálculos entalpías
 
@@ -304,21 +303,21 @@ df['S_hl_store_MIX_3'] = df.apply(lambda r: S_hl_store_MIX(UA_total_2, r['T_mix'
 #df['S_hl_store_acumulado'] = df['S_hl_store'].cumsum()
 
 #df['S_hl_store_MIX_acumulado'] = df['S_hl_store_MIX'].cumsum()
-df['S_hl_store_MIX_2_acumulado'] = df['S_hl_store_MIX_2'].cumsum()
-df['S_hl_store_MIX_3_acumulado'] = df['S_hl_store_MIX_3'].cumsum()
+#df['S_hl_store_MIX_2_acumulado'] = df['S_hl_store_MIX_2'].cumsum()
+#df['S_hl_store_MIX_3_acumulado'] = df['S_hl_store_MIX_3'].cumsum()
 
 # ERROR y S_gen
 #df['Error_H'] = df['H_store'] - df['H_flow_acumulado'] + df['H_hl_store_acumulado']
 #df['S_gen'] = df['S_store'] - df['S_flow_acumulado'] - df['S_hl_store_acumulado']
 #df['S_gen_MIX'] = df['S_store_MIX'] - df['S_flow_acumulado'] - df['S_hl_store_MIX_acumulado']
-df['S_gen_MIX_2'] = df['S_store_MIX_2'] - df['S_flow_acumulado'] - df['S_hl_store_MIX_2_acumulado']
-df['S_gen_MIX_3'] = df['S_store_MIX_3'] - df['S_flow_acumulado'] - df['S_hl_store_MIX_3_acumulado']
+#df['S_gen_MIX_2'] = df['S_store_MIX_2'] - df['S_flow_acumulado'] - df['S_hl_store_MIX_2_acumulado']
+#df['S_gen_MIX_3'] = df['S_store_MIX_3'] - df['S_flow_acumulado'] - df['S_hl_store_MIX_3_acumulado']
 
 
 # Convertimos el índice a horas (si cada fila es 1 minuto)
 #df['tiempo_hrs'] = df.index / 60 
 
-# Convertimos a MegaJoules (MJ) para mejor escala [cite: 553]
+# Convertimos a MegaJoules (MJ) para mejor escala
 #df['H_store_MJ'] = df['H_store'] / 1e6
 #df['H_flow_acum_MJ'] = df['H_flow_acumulado'] / 1e6
 #df['H_hl_acum_MJ'] = df['H_hl_store_acumulado'] / 1e6
@@ -326,7 +325,7 @@ df['S_gen_MIX_3'] = df['S_store_MIX_3'] - df['S_flow_acumulado'] - df['S_hl_stor
 # Crear el gráfico
 #plt.figure(figsize=(10, 6))
 
-# Ploteamos los componentes de la Primera Ley [cite: 550]
+# Ploteamos los componentes de la Primera Ley 
 #plt.plot(df['tiempo_hrs'], df['H_flow_acum_MJ'], 'k--', label='$\Delta H_{flow}^{exp}$')
 #plt.plot(df['tiempo_hrs'], df['H_store_MJ'], 'k-', label='$\Delta H_{store}^{exp}$')
 #plt.plot(df['tiempo_hrs'], df['H_hl_acum_MJ'], 'r-', linewidth=1, label='$\Delta H_{hl}^{exp}$')
@@ -351,34 +350,44 @@ df['S_gen_MIX_3'] = df['S_store_MIX_3'] - df['S_flow_acumulado'] - df['S_hl_stor
 #df['S_hl_acum_kJ_K'] = df['S_hl_store_acumulado'] / 1e3
 #df['S_gen_kJ_K'] = df['S_gen'] / 1e3
 
-# 2. Escalamiento: Convertimos a kiloJoules por Kelvin (kJ/K)
-#df['S_store_MIX_kJ_K'] = df['S_store'] / 1e3
-#df['S_flow_acum_kJ_K'] = df['S_flow_acumulado'] / 1e3
-#df['S_hl_acum_MIX_kJ_K'] = df['S_hl_store_acumulado'] / 1e3
-#df['S_gen_MIX_kJ_K'] = df['S_gen'] / 1e3
+df['S_store_MIX_kJ_K'] = df['S_store_MIX'] / 1e3
+df['S_hl_acum_MIX_kJ_K'] = df['S_hl_store_MIX_acumulado'] / 1e3
+df['S_gen_MIX_kJ_K'] = df['S_gen_MIX'] / 1e3
+
+df['S_store_MIX_2_kJ_K'] = df['S_store_MIX_2'] / 1e3
+df['S_hl_acum_MIX_2_kJ_K'] = df['S_hl_store_MIX_2_acumulado'] / 1e3
+df['S_gen_MIX_2_kJ_K'] = df['S_gen_MIX_2'] / 1e3
+
+df['S_store_MIX_3_kJ_K'] = df['S_store_MIX_3'] / 1e3
+df['S_hl_acum_MIX_3_kJ_K'] = df['S_hl_store_MIX_3_acumulado'] / 1e3
+df['S_gen_MIX_3_kJ_K'] = df['S_gen'] / 1e3
 
 # 3. Crear el gráfico de la Segunda Ley
-#plt.figure(figsize=(10, 6))
+plt.figure(figsize=(10, 6))
 
 # Ploteamos los componentes de la Segunda Ley
-#plt.plot(df['tiempo_hrs'], df['S_flow_acum_kJ_K'], 'k--', label='$\Delta S_{flow}^{exp}$')
-#plt.plot(df['tiempo_hrs'], df['S_store_kJ_K'], 'k-', label='$\Delta S_{store}^{exp}$')
-#plt.plot(df['tiempo_hrs'], df['S_hl_acum_kJ_K'], 'r-', linewidth=1, label='$\Delta S_{hl}^{exp}$')
+plt.plot(df['tiempo_hrs'], df['S_flow_acum_kJ_K'], 'k--', label='$\Delta S_{flow}^{exp}$')
+plt.plot(df['tiempo_hrs'], df['S_store_kJ_K'], 'k-', label='$\Delta S_{store}^{exp}$')
+plt.plot(df['tiempo_hrs'], df['S_hl_acum_kJ_K'], 'r-', linewidth=1, label='$\Delta S_{hl}^{exp}$')
+
+plt.plot(df['tiempo_hrs'], df['S_store_MIX_kJ_K'], 'c-', label='$\Delta S_{store.mezclado}^{exp}$')
+plt.plot(df['tiempo_hrs'], df['S_hl_acum_kJ_K'], 'c-', linewidth=1, label='$\Delta S_{hl.mezclado}^{exp}$')
 
 # Ploteamos la Entropía Generada (Irreversibilidades)
-#plt.plot(df['tiempo_hrs'], df['S_gen_kJ_K'], 'b-.', linewidth=1.5, label='$S_{gen}$ (Irreversibilidades)')
+plt.plot(df['tiempo_hrs'], df['S_gen_kJ_K'], 'b-.', linewidth=1.5, label='$S_{gen}$ (Irreversibilidades)')
+plt.plot(df['tiempo_hrs'], df['S_gen_MIX_kJ_K'], 'c-.', linewidth=1.5, label='$S_{gen.mezclado}$ (Irreversibilidades)')
 
 # Configuración de formato profesional
-#plt.xlabel('Time [h]')
-#plt.ylabel('Entropy [kJ/K]')
-#plt.title('Análisis de la Segunda Ley - Balance de Entropías')
-#plt.legend(loc='best')
-#plt.grid(True, linestyle=':', alpha=0.6)
+plt.xlabel('Time [h]')
+plt.ylabel('Entropy [kJ/K]')
+plt.title('Análisis de la Segunda Ley - Balance de Entropías')
+plt.legend(loc='best')
+plt.grid(True, linestyle=':', alpha=0.6)
 
-#plt.tight_layout()
-#plt.show()
+plt.tight_layout()
+plt.show()
 
-ruta_salida = directorio_script / 'datos_procesados_estanque_2.csv'
+ruta_salida = directorio_script / 'datos_procesados_estanque_3.csv'
 
 # Guardamos el DataFrame
 
