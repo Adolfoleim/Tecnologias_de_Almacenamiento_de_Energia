@@ -218,30 +218,34 @@ def S_hl_store_MIX(UA, t_s, t_amb):
 
 # Cálculos mix
 
-T_init = 37.66
+#df['C_flow_i1'] = df.apply(lambda r: C_flow(r['T36'], r['T35'], r['F32']), axis=1)
+#df['C_flow_i2'] = df.apply(lambda r: C_flow(r['T51'], r['T52'], r['F51']), axis=1)
 
-t_mix = [T_init]
+#df['a_val'] = df.apply(lambda r: a_cte(UA_total_1, r['C_flow_i1'], r['C_flow_i2']), axis=1)
 
-contador = 0
+#df['t_inf_val'] = df.apply(lambda r: T_inf(UA_total_1, r['C_flow_i1'], r['C_flow_i2'], r['T36'], r['T51'], r['T_f']), axis=1)
 
-for i in range(1, len(df)):
-    t_prev = t_mix[-1]
-    T_amb = df['T_f'].iloc[i]
+# 2. CONVERSIÓN A NUMPY (Para que vuele)
+# Extraemos los valores calculados como listas nativas de alta velocidad
+#t_inf_arr = df['t_inf_val'].values
+#a_arr = df['a_val'].values
 
-    C_flow_i1 = df.apply(lambda r: C_flow(r['T36'], r['T35'], r['F32']), axis=1 )
-    C_flow_i2 = df.apply(lambda r: C_flow(r['T51'], r['T52'], r['F51']), axis=1 )
+# 3. EL LOOP RECURSIVO (Ahora sí, solo lo que depende del paso anterior)
+#T_init = 37.66
+#t_mix = np.zeros(len(df)) # Creamos un array vacío del tamaño del df
+#t_mix[0] = T_init
 
-    a = a_cte(UA_total_1, C_flow_i1, C_flow_i2)
+#contador = 0
 
-    t_inf = df.apply(lambda r: T_inf(UA_total_1, C_flow_i1, C_flow_i2, r['T36'], r['T51'], r['T_f']), axis=1)
-
-    t_mix_actual = T_mix(t_inf, a, t_prev)
-
-    t_mix.append(t_mix_actual)
-    contador +=1
-    print(contador)
-
-df['T_mix'] = t_mix
+#for i in range(1, len(df)):
+#    t_prev = t_mix[i-1]
+    
+    # Llamamos a tu función solo con los números de esa fila exacta
+#    t_mix[i] = T_mix(t_inf_arr[i], a_arr[i], t_prev)
+#    contador += 1
+#    print(contador)
+# Guardamos el resultado final en el DataFrame
+#df['T_mix'] = t_mix
 
 #f2 = df.iloc[0]
 ## Calculo entropía mix
@@ -294,6 +298,7 @@ df['T_mix'] = t_mix
 # ERROR y S_gen
 #df['Error_H'] = df['H_store'] - df['H_flow_acumulado'] + df['H_hl_store_acumulado']
 #df['S_gen'] = df['S_store'] - df['S_flow_acumulado'] - df['S_hl_store_acumulado']
+#df['S_gen_MIX'] = df['S_store_MIX'] - df['S_flow_acumulado'] - df['S_hl_store_MIX_acumulado']
 
 # Convertimos el índice a horas (si cada fila es 1 minuto)
 #df['tiempo_hrs'] = df.index / 60 
@@ -331,6 +336,12 @@ df['T_mix'] = t_mix
 #df['S_hl_acum_kJ_K'] = df['S_hl_store_acumulado'] / 1e3
 #df['S_gen_kJ_K'] = df['S_gen'] / 1e3
 
+# 2. Escalamiento: Convertimos a kiloJoules por Kelvin (kJ/K)
+#df['S_store_MIX_kJ_K'] = df['S_store'] / 1e3
+#df['S_flow_acum_kJ_K'] = df['S_flow_acumulado'] / 1e3
+#df['S_hl_acum_MIX_kJ_K'] = df['S_hl_store_acumulado'] / 1e3
+#df['S_gen_MIX_kJ_K'] = df['S_gen'] / 1e3
+
 # 3. Crear el gráfico de la Segunda Ley
 #plt.figure(figsize=(10, 6))
 
@@ -352,13 +363,14 @@ df['T_mix'] = t_mix
 #plt.tight_layout()
 #plt.show()
 
-ruta_salida = directorio_script / 'datos_procesados_estanque.csv'
+#ruta_salida = directorio_script / 'datos_procesados_estanque_2.csv'
 
 # Guardamos el DataFrame
-df.to_csv(ruta_salida, 
-          sep=';',           # Separador de columnas
-          decimal=',',       # Separador de decimales (estándar chileno/Excel)
-          encoding='latin-1' # Para que Excel reconozca bien los caracteres
-)
 
-print(f"Archivo guardado exitosamente en: {ruta_salida}")
+#df.to_csv(ruta_salida, 
+#          sep=';',           # Separador de columnas
+#          decimal=',',       # Separador de decimales (estándar chileno/Excel)
+#          encoding='latin-1' # Para que Excel reconozca bien los caracteres
+#)
+
+#print(f"Archivo guardado exitosamente en: {ruta_salida}")
