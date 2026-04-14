@@ -175,7 +175,7 @@ def T_inf(UA, c_flow1, c_flow2, T_in1, T_in2, T_amb):
     return t_inf
 
 def T_mix(T_inf, a, T_anterior, dif_tiempo=60):
-    t_mix = T_inf + (T_anterior - T_inf)*np.e(-a*dif_tiempo)
+    t_mix = T_inf + (T_anterior - T_inf)*np.exp(-a*dif_tiempo)
     return t_mix
 
 
@@ -237,6 +237,7 @@ for i in range(1, len(df)):
 
     t_mix.append(t_mix_actual)
 
+df['T_mix'] = t_mix
 ## Cálculos entalpías
 
 # df['H_store'] = df.apply(lambda r: H_store([ f1['TE1'], f1['TE2'], f1['TE3'], f1['TE4'], f1['TE5'], f1['TE6'],
