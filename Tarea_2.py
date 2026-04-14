@@ -226,9 +226,16 @@ for i in range(1, len(df)):
     t_prev = t_mix[-1]
     T_amb = df['T_f'].iloc[i]
 
-    C_flow_i1 = df.apply(lambda r: C_flow(r['T36'], r['T51'], r['T35'], r['T52'], r['F32'], r['F51'], r['F31'], r['F51']), axis=1 )
-    C_flow_i2 = df.apply(lambda r: C_flow(r['T36'], r['T51'], r['T35'], r['T52'], r['F32'], r['F51'], r['F31'], r['F51']), axis=1 )
-    
+    C_flow_i1 = df.apply(lambda r: C_flow(r['T36'], r['T35'], r['F32']), axis=1 )
+    C_flow_i2 = df.apply(lambda r: C_flow(r['T51'], r['T52'], r['F51']), axis=1 )
+
+    a = a_cte(UA_total_1, C_flow_i1, C_flow_i2)
+
+    t_inf = df.apply(lambda r: T_inf(UA_total_1, C_flow_i1, C_flow_i2, r['T36'], r['T51'], r['T_f']), axis=1)
+
+    t_mix_actual = T_mix(t_inf, a, t_prev)
+
+    t_mix.append(t_mix_actual)
 
 ## Cálculos entalpías
 
