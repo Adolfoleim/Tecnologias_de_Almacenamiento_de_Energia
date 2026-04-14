@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 directorio_script = Path(__file__).parent
 
 # Une esa ruta con el nombre de tu archivo CSV
-ruta_csv = directorio_script / 'datos_estanque_v2.csv'
+ruta_csv = directorio_script / 'datos_procesados_estanque.csv'
 
 # Lee el archivo usando la ruta absoluta que acabamos de construir
 df = pd.read_csv(ruta_csv, encoding='latin-1', sep=';', decimal=',')
@@ -27,10 +27,13 @@ cantidad_sensores = 11 # Cantidad de sensores de temperatura
 ### Propiedades Aislación
 
 espesor_1 = 0.013 # https://www.comind.cl/producto/manta-epdm-aiscom-15m-x-1500mm-x-13mm/
-k_1 = 0.038 # W/(m * °C)
+k_1 = 0.038 # W/(m * °C) EPDM
 
 espesor_2 = 0.013 # https://www.comind.cl/producto/manta-epdm-aiscom-15m-x-1500mm-x-13mm/
-k_2 = 0.038 # W/(m * °C)
+k_2 = 0.0000000001 # W/(m * °C) Perfectamente aislado
+
+k_3 = 205 # W/(m * °C) conductividad aluminio
+
 
 ### Propiedades del estanque
 
@@ -157,6 +160,7 @@ f1 = df.iloc[0] # Fila 1
 
 UA_total_1 = 1 / ( espesor_1 / (k_1 * 2 * area_tapa) ) + 1 / ( np.log(((diametro_estanque/2 + espesor_1) / ( diametro_estanque/2 ) )) / ( k_1 * 2 * np.pi * altura_estanque ) )
 UA_total_2 = 1 / ( espesor_2 / (k_2 * 2 * area_tapa) ) + 1 / ( np.log(((diametro_estanque/2 + espesor_2) / ( diametro_estanque/2 ) )) / ( k_2 * 2 * np.pi * altura_estanque ) )
+UA_total_3 = 1 / ( espesor_2 / (k_3 * 2 * area_tapa) ) + 1 / ( np.log(((diametro_estanque/2 + espesor_2) / ( diametro_estanque/2 ) )) / ( k_3 * 2 * np.pi * altura_estanque ) )
 
 def C_flow(T_in, T_out, F, P=101325):
     h_in = PropsSI('H', 'T', T_in + 273.15, 'P', P, 'Water')
@@ -218,43 +222,48 @@ def S_hl_store_MIX(UA, t_s, t_amb):
 
 # Cálculos mix
 
-#df['C_flow_i1'] = df.apply(lambda r: C_flow(r['T36'], r['T35'], r['F32']), axis=1)
-#df['C_flow_i2'] = df.apply(lambda r: C_flow(r['T51'], r['T52'], r['F51']), axis=1)
+df['C_flow_i1'] = df.apply(lambda r: C_flow(r['T36'], r['T35'], r['F32']), axis=1)
+df['C_flow_i2'] = df.apply(lambda r: C_flow(r['T51'], r['T52'], r['F51']), axis=1)
 
-#df['a_val'] = df.apply(lambda r: a_cte(UA_total_1, r['C_flow_i1'], r['C_flow_i2']), axis=1)
+df['a_val'] = df.apply(lambda r: a_cte(UA_total_1, r['C_flow_i1'], r['C_flow_i2']), axis=1)
 
-#df['t_inf_val'] = df.apply(lambda r: T_inf(UA_total_1, r['C_flow_i1'], r['C_flow_i2'], r['T36'], r['T51'], r['T_f']), axis=1)
+df['t_inf_val'] = df.apply(lambda r: T_inf(UA_total_1, r['C_flow_i1'], r['C_flow_i2'], r['T36'], r['T51'], r['T_f']), axis=1)
 
 # 2. CONVERSIÓN A NUMPY (Para que vuele)
 # Extraemos los valores calculados como listas nativas de alta velocidad
-#t_inf_arr = df['t_inf_val'].values
-#a_arr = df['a_val'].values
+t_inf_arr = df['t_inf_val'].values
+a_arr = df['a_val'].values
 
 # 3. EL LOOP RECURSIVO (Ahora sí, solo lo que depende del paso anterior)
-#T_init = 37.66
-#t_mix = np.zeros(len(df)) # Creamos un array vacío del tamaño del df
-#t_mix[0] = T_init
+T_init = 37.66
+t_mix = np.zeros(len(df)) # Creamos un array vacío del tamaño del df
+t_mix[0] = T_init
 
-#contador = 0
-
-#for i in range(1, len(df)):
-#    t_prev = t_mix[i-1]
+contador = 0
+for i in range(1, len(df)):
+    t_prev = t_mix[i-1]
     
     # Llamamos a tu función solo con los números de esa fila exacta
-#    t_mix[i] = T_mix(t_inf_arr[i], a_arr[i], t_prev)
-#    contador += 1
-#    print(contador)
+    t_mix[i] = T_mix(t_inf_arr[i], a_arr[i], t_prev)
+    contador += 1
+    print(contador)
 # Guardamos el resultado final en el DataFrame
-#df['T_mix'] = t_mix
+df['T_mix_1'] = t_mix
 
-#f2 = df.iloc[0]
+f2 = df.iloc[0]
 ## Calculo entropía mix
 
-#df['S_store_MIX'] = df.apply(lambda r: S_store_MIX(f2['T_mix'], r['T_mix']) , axis=1)
+df['S_store_MIX_2'] = df.apply(lambda r: S_store_MIX(f2['T_mix'], r['T_mix']) , axis=1)
 
-#df['S_flow'] = df.apply(lambda r: S_flow(r['T36'], r['T51'], r['T35'], r['T52'], r['F32'], r['F51'], r['F31'], r['F51']), axis=1 )
+#df['S_flow_2'] = df.apply(lambda r: S_flow(r['T36'], r['T51'], r['T35'], r['T52'], r['F32'], r['F51'], r['F31'], r['F51']), axis=1 )
 
-#df['S_hl_store_MIX'] = df.apply(lambda r: S_hl_store_MIX(UA_total_1, r['T_mix'], r['T_f']), axis=1)
+df['S_hl_store_MIX_2'] = df.apply(lambda r: S_hl_store_MIX(UA_total_2, r['T_mix'], r['T_f']), axis=1)
+
+df['S_store_MIX_3'] = df.apply(lambda r: S_store_MIX(f2['T_mix'], r['T_mix']) , axis=1)
+
+#df['S_flow_3'] = df.apply(lambda r: S_flow(r['T36'], r['T51'], r['T35'], r['T52'], r['F32'], r['F51'], r['F31'], r['F51']), axis=1 )
+
+df['S_hl_store_MIX_3'] = df.apply(lambda r: S_hl_store_MIX(UA_total_2, r['T_mix'], r['T_f']), axis=1)
 
 ## Cálculos entalpías
 
@@ -295,10 +304,16 @@ def S_hl_store_MIX(UA, t_s, t_amb):
 #df['S_hl_store_acumulado'] = df['S_hl_store'].cumsum()
 
 #df['S_hl_store_MIX_acumulado'] = df['S_hl_store_MIX'].cumsum()
+df['S_hl_store_MIX_2_acumulado'] = df['S_hl_store_MIX_2'].cumsum()
+df['S_hl_store_MIX_3_acumulado'] = df['S_hl_store_MIX_3'].cumsum()
+
 # ERROR y S_gen
 #df['Error_H'] = df['H_store'] - df['H_flow_acumulado'] + df['H_hl_store_acumulado']
 #df['S_gen'] = df['S_store'] - df['S_flow_acumulado'] - df['S_hl_store_acumulado']
 #df['S_gen_MIX'] = df['S_store_MIX'] - df['S_flow_acumulado'] - df['S_hl_store_MIX_acumulado']
+df['S_gen_MIX_2'] = df['S_store_MIX_2'] - df['S_flow_acumulado'] - df['S_hl_store_MIX_2_acumulado']
+df['S_gen_MIX_3'] = df['S_store_MIX_3'] - df['S_flow_acumulado'] - df['S_hl_store_MIX_3_acumulado']
+
 
 # Convertimos el índice a horas (si cada fila es 1 minuto)
 #df['tiempo_hrs'] = df.index / 60 
@@ -363,14 +378,14 @@ def S_hl_store_MIX(UA, t_s, t_amb):
 #plt.tight_layout()
 #plt.show()
 
-#ruta_salida = directorio_script / 'datos_procesados_estanque_2.csv'
+ruta_salida = directorio_script / 'datos_procesados_estanque_2.csv'
 
 # Guardamos el DataFrame
 
-#df.to_csv(ruta_salida, 
-#          sep=';',           # Separador de columnas
-#          decimal=',',       # Separador de decimales (estándar chileno/Excel)
-#          encoding='latin-1' # Para que Excel reconozca bien los caracteres
-#)
+df.to_csv(ruta_salida, 
+          sep=';',           # Separador de columnas
+          decimal=',',       # Separador de decimales (estándar chileno/Excel)
+          encoding='latin-1' # Para que Excel reconozca bien los caracteres
+)
 
-#print(f"Archivo guardado exitosamente en: {ruta_salida}")
+print(f"Archivo guardado exitosamente en: {ruta_salida}")
