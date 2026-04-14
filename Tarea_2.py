@@ -29,6 +29,9 @@ cantidad_sensores = 11 # Cantidad de sensores de temperatura
 espesor_1 = 0.013 # https://www.comind.cl/producto/manta-epdm-aiscom-15m-x-1500mm-x-13mm/
 k_1 = 0.038 # W/(m * °C)
 
+espesor_2 = 0.013 # https://www.comind.cl/producto/manta-epdm-aiscom-15m-x-1500mm-x-13mm/
+k_2 = 0.038 # W/(m * °C)
+
 ### Propiedades del estanque
 
 # Volumen del estanque en metros cúbicos
@@ -150,103 +153,190 @@ def S_hl_store(k, e, A_tapa, r_o, L, t_s1, t_s2, t_s3, t_s4, t_s5, t_s6, t_s7, t
 
 f1 = df.iloc[0] # Fila 1
 
+## Estanque Virtual
 
+UA_total_1 = 1 / ( espesor_1 / (k_1 * 2 * area_tapa) ) + 1 / ( np.log(((diametro_estanque/2 + espesor_1) / ( diametro_estanque/2 ) )) / ( k_1 * 2 * np.pi * altura_estanque ) )
+UA_total_2 = 1 / ( espesor_2 / (k_2 * 2 * area_tapa) ) + 1 / ( np.log(((diametro_estanque/2 + espesor_2) / ( diametro_estanque/2 ) )) / ( k_2 * 2 * np.pi * altura_estanque ) )
+
+def C_flow(T_in, T_out, F, P=101325):
+    h_in = PropsSI('H', 'T', T_in + 273.15, 'P', P, 'Water')
+    h_out = PropsSI('H', 'T', T_out + 273.15, 'P', P, 'Water')
+    m_dot = F * 1000 / 60000 # L/min a kg/seg
+    c_flow = m_dot * (h_out - h_in)/(T_out-T_in)
+    return c_flow
+
+def a_cte(UA, c_flow1, c_flow2, m_est=volumen_estanque*1000, c_p=4186):
+    C_store = m_est * c_p
+    a = (UA + c_flow1 + c_flow2) / C_store
+    return a
+
+def T_inf(UA, c_flow1, c_flow2, T_in1, T_in2, T_amb):
+    t_inf = (UA * T_amb + c_flow1*T_in1 + c_flow2*T_in2) / (UA + c_flow1 + c_flow2) 
+    return t_inf
+
+def T_mix(T_inf, a, T_anterior, dif_tiempo=60):
+    t_mix = T_inf + (T_anterior - T_inf)*np.e(-a*dif_tiempo)
+    return t_mix
+
+
+
+## Cálculos mix
+
+# Funciones de entalpías y entropías
+def H_store_MIX(T_inicial, T_actual, V, P=101325):
+    
+    rho = PropsSI('D', 'T', T_actual + 273.15, 'P', P, 'Water')
+    h = PropsSI('H', 'T', T_actual + 273.15, 'P', P, 'Water')
+
+    rho_0 = PropsSI('D', 'T', T_inicial + 273.15, 'P', P, 'Water')
+    h_0 = PropsSI('H', 'T', T_inicial + 273.15, 'P', P, 'Water')
+
+    h_total_actual = V * rho * h
+    h_total_inicial = V * rho_0 * h_0
+    
+    return h_total_actual - h_total_inicial
+    
+def S_store_MIX(T_inicial, T_actual, V, P=101325):
+    rho = PropsSI('D', 'T', T_actual + 273.15, 'P', P, 'Water')
+    s = PropsSI('S', 'T', T_actual + 273.15, 'P', P, 'Water')
+
+    rho_0 = PropsSI('D', 'T', T_inicial + 273.15, 'P', P, 'Water')
+    s_0 = PropsSI('S', 'T', T_inicial + 273.15, 'P', P, 'Water')
+
+    s_total_actual = V * rho * s
+    s_total_inicial = V * rho_0 * s_0
+    
+    return s_total_actual - s_total_inicial
+
+def H_hl_store_MIX(UA, t_s, t_amb):
+    h_hl = -( UA*(t_s - t_amb) ) 
+    return ( h_hl ) * 60 # El 60 es el tiempo, y considera 1 minuto = 60 segundos ya que UA está en J /(s*K)
+
+def S_hl_store_MIX(UA, t_s, t_amb):
+    h_hl = -( UA*(t_s - t_amb)/(t_s + 273.15) ) 
+    return ( h_hl ) * 60 # El 60 es el tiempo, y considera 1 minuto = 60 segundos ya que UA está en J /(s*K)
+
+# Cálculos mix
+
+T_init = 37.66
+
+t_mix = [T_init]
+
+for i in range(1, len(df)):
+    t_prev = t_mix[-1]
+    T_amb = df['T_f'].iloc[i]
+
+    C_flow_i1 = df.apply(lambda r: C_flow(r['T36'], r['T51'], r['T35'], r['T52'], r['F32'], r['F51'], r['F31'], r['F51']), axis=1 )
+    C_flow_i2 = df.apply(lambda r: C_flow(r['T36'], r['T51'], r['T35'], r['T52'], r['F32'], r['F51'], r['F31'], r['F51']), axis=1 )
+    
 
 ## Cálculos entalpías
 
-df['H_store'] = df.apply(lambda r: H_store([ f1['TE1'], f1['TE2'], f1['TE3'], f1['TE4'], f1['TE5'], f1['TE6'],
-                                            f1['TE7'], f1['TE8'], f1['TE9'], f1['TE10'], f1['TE11'] ],
-                                            [ r['TE1'], r['TE2'], r['TE3'], r['TE4'], r['TE5'], r['TE6'],
-                                            r['TE7'], r['TE8'], r['TE9'], r['TE10'], r['TE11'] ], volumen_por_sensor), axis=1 )
+# df['H_store'] = df.apply(lambda r: H_store([ f1['TE1'], f1['TE2'], f1['TE3'], f1['TE4'], f1['TE5'], f1['TE6'],
+#                                            f1['TE7'], f1['TE8'], f1['TE9'], f1['TE10'], f1['TE11'] ],
+#                                            [ r['TE1'], r['TE2'], r['TE3'], r['TE4'], r['TE5'], r['TE6'],
+#                                            r['TE7'], r['TE8'], r['TE9'], r['TE10'], r['TE11'] ], volumen_por_sensor), axis=1 )
 
-df['H_flow'] = df.apply(lambda r: H_flow(r['T36'], r['T51'], r['T35'], r['T52'], r['F32'], r['F51'], r['F31'], r['F51']), axis=1 )
+# df['H_flow'] = df.apply(lambda r: H_flow(r['T36'], r['T51'], r['T35'], r['T52'], r['F32'], r['F51'], r['F31'], r['F51']), axis=1 )
 
-df['H_hl_store'] = df.apply(lambda r: H_hl_store(k_1, espesor_1, area_tapa, diametro_estanque/2, altura_por_sensor, 
-                                                 r['TE1'], r['TE2'], r['TE3'], r['TE4'], r['TE5'], r['TE6'],
-                                                 r['TE7'], r['TE8'], r['TE9'], r['TE10'], r['TE11'], r['T_f']), axis=1 )
+# df['H_hl_store'] = df.apply(lambda r: H_hl_store(k_1, espesor_1, area_tapa, diametro_estanque/2, altura_por_sensor, 
+#                                                 r['TE1'], r['TE2'], r['TE3'], r['TE4'], r['TE5'], r['TE6'],
+#                                                 r['TE7'], r['TE8'], r['TE9'], r['TE10'], r['TE11'], r['T_f']), axis=1 )
 
 
 
 ## Cálculos entropías
 
-df['S_store'] = df.apply(lambda r: S_store([ f1['TE1'], f1['TE2'], f1['TE3'], f1['TE4'], f1['TE5'], f1['TE6'],
-                                            f1['TE7'], f1['TE8'], f1['TE9'], f1['TE10'], f1['TE11'] ],
-                                            [ r['TE1'], r['TE2'], r['TE3'], r['TE4'], r['TE5'], r['TE6'],
-                                            r['TE7'], r['TE8'], r['TE9'], r['TE10'], r['TE11'] ], volumen_por_sensor), axis=1 )
+#df['S_store'] = df.apply(lambda r: S_store([ f1['TE1'], f1['TE2'], f1['TE3'], f1['TE4'], f1['TE5'], f1['TE6'],
+#                                            f1['TE7'], f1['TE8'], f1['TE9'], f1['TE10'], f1['TE11'] ],
+#                                            [ r['TE1'], r['TE2'], r['TE3'], r['TE4'], r['TE5'], r['TE6'],
+#                                            r['TE7'], r['TE8'], r['TE9'], r['TE10'], r['TE11'] ], volumen_por_sensor), axis=1 )
 
-df['S_flow'] = df.apply(lambda r: S_flow(r['T36'], r['T51'], r['T35'], r['T52'], r['F32'], r['F51'], r['F31'], r['F51']), axis=1 )
+#df['S_flow'] = df.apply(lambda r: S_flow(r['T36'], r['T51'], r['T35'], r['T52'], r['F32'], r['F51'], r['F31'], r['F51']), axis=1 )
 
-df['S_hl_store'] = df.apply(lambda r: S_hl_store(k_1, espesor_1, area_tapa, diametro_estanque/2, altura_por_sensor, 
-                                                 r['TE1'], r['TE2'], r['TE3'], r['TE4'], r['TE5'], r['TE6'],
-                                                 r['TE7'], r['TE8'], r['TE9'], r['TE10'], r['TE11'], r['T_f']), axis=1 )
+#df['S_hl_store'] = df.apply(lambda r: S_hl_store(k_1, espesor_1, area_tapa, diametro_estanque/2, altura_por_sensor, 
+#                                                 r['TE1'], r['TE2'], r['TE3'], r['TE4'], r['TE5'], r['TE6'],
+#                                                 r['TE7'], r['TE8'], r['TE9'], r['TE10'], r['TE11'], r['T_f']), axis=1 )
 
 
 
 ## Acumulado de flujo (flow) y pérdidas de calor (hl) en entalpía y entropía
 
-df['H_flow_acumulado'] = df['H_flow'].cumsum()
-df['H_hl_store_acumulado'] = df['H_hl_store'].cumsum()
+#df['H_flow_acumulado'] = df['H_flow'].cumsum()
+#df['H_hl_store_acumulado'] = df['H_hl_store'].cumsum()
 
-df['S_flow_acumulado'] = df['S_flow'].cumsum()
-df['S_hl_store_acumulado'] = df['S_hl_store'].cumsum()
+#df['S_flow_acumulado'] = df['S_flow'].cumsum()
+#df['S_hl_store_acumulado'] = df['S_hl_store'].cumsum()
 
 # ERROR y S_gen
-df['Error_H'] = df['H_store'] - df['H_flow_acumulado'] + df['H_hl_store_acumulado']
-df['S_gen'] = df['S_store'] - df['S_flow_acumulado'] - df['S_hl_store_acumulado']
+#df['Error_H'] = df['H_store'] - df['H_flow_acumulado'] + df['H_hl_store_acumulado']
+#df['S_gen'] = df['S_store'] - df['S_flow_acumulado'] - df['S_hl_store_acumulado']
 
 # Convertimos el índice a horas (si cada fila es 1 minuto)
-df['tiempo_hrs'] = df.index / 60 
+#df['tiempo_hrs'] = df.index / 60 
 
 # Convertimos a MegaJoules (MJ) para mejor escala [cite: 553]
-df['H_store_MJ'] = df['H_store'] / 1e6
-df['H_flow_acum_MJ'] = df['H_flow_acumulado'] / 1e6
-df['H_hl_acum_MJ'] = df['H_hl_store_acumulado'] / 1e6
+#df['H_store_MJ'] = df['H_store'] / 1e6
+#df['H_flow_acum_MJ'] = df['H_flow_acumulado'] / 1e6
+#df['H_hl_acum_MJ'] = df['H_hl_store_acumulado'] / 1e6
 
 # Crear el gráfico
-plt.figure(figsize=(10, 6))
+#plt.figure(figsize=(10, 6))
 
 # Ploteamos los componentes de la Primera Ley [cite: 550]
-plt.plot(df['tiempo_hrs'], df['H_flow_acum_MJ'], 'k--', label='$\Delta H_{flow}^{exp}$')
-plt.plot(df['tiempo_hrs'], df['H_store_MJ'], 'k-', label='$\Delta H_{store}^{exp}$')
-plt.plot(df['tiempo_hrs'], df['H_hl_acum_MJ'], 'r-', linewidth=1, label='$\Delta H_{hl}^{exp}$')
+#plt.plot(df['tiempo_hrs'], df['H_flow_acum_MJ'], 'k--', label='$\Delta H_{flow}^{exp}$')
+#plt.plot(df['tiempo_hrs'], df['H_store_MJ'], 'k-', label='$\Delta H_{store}^{exp}$')
+#plt.plot(df['tiempo_hrs'], df['H_hl_acum_MJ'], 'r-', linewidth=1, label='$\Delta H_{hl}^{exp}$')
 
 # Configuración de formato profesional
-plt.xlabel('Time [h]')
-plt.ylabel('Energy [MJ]')
-plt.title('Validación de la Primera Ley - Balance de Entalpías')
-plt.legend(loc='best')
-plt.grid(True, linestyle=':', alpha=0.6)
+#plt.xlabel('Time [h]')
+#plt.ylabel('Energy [MJ]')
+#plt.title('Validación de la Primera Ley - Balance de Entalpías')
+#plt.legend(loc='best')
+#plt.grid(True, linestyle=':', alpha=0.6)
 
 # (Opcional) Marcar las fases si conoces los tiempos de corte
 # plt.axvline(x=1.5, color='gray', linestyle='--', alpha=0.5) # Ejemplo: fin de carga
 
-plt.tight_layout()
-plt.show()
+#plt.tight_layout()
+#plt.show()
 
 
 # 2. Escalamiento: Convertimos a kiloJoules por Kelvin (kJ/K)
-df['S_store_kJ_K'] = df['S_store'] / 1e3
-df['S_flow_acum_kJ_K'] = df['S_flow_acumulado'] / 1e3
-df['S_hl_acum_kJ_K'] = df['S_hl_store_acumulado'] / 1e3
-df['S_gen_kJ_K'] = df['S_gen'] / 1e3
+#df['S_store_kJ_K'] = df['S_store'] / 1e3
+#df['S_flow_acum_kJ_K'] = df['S_flow_acumulado'] / 1e3
+#df['S_hl_acum_kJ_K'] = df['S_hl_store_acumulado'] / 1e3
+#df['S_gen_kJ_K'] = df['S_gen'] / 1e3
 
 # 3. Crear el gráfico de la Segunda Ley
-plt.figure(figsize=(10, 6))
+#plt.figure(figsize=(10, 6))
 
 # Ploteamos los componentes de la Segunda Ley
-plt.plot(df['tiempo_hrs'], df['S_flow_acum_kJ_K'], 'k--', label='$\Delta S_{flow}^{exp}$')
-plt.plot(df['tiempo_hrs'], df['S_store_kJ_K'], 'k-', label='$\Delta S_{store}^{exp}$')
-plt.plot(df['tiempo_hrs'], df['S_hl_acum_kJ_K'], 'r-', linewidth=1, label='$\Delta S_{hl}^{exp}$')
+#plt.plot(df['tiempo_hrs'], df['S_flow_acum_kJ_K'], 'k--', label='$\Delta S_{flow}^{exp}$')
+#plt.plot(df['tiempo_hrs'], df['S_store_kJ_K'], 'k-', label='$\Delta S_{store}^{exp}$')
+#plt.plot(df['tiempo_hrs'], df['S_hl_acum_kJ_K'], 'r-', linewidth=1, label='$\Delta S_{hl}^{exp}$')
 
 # Ploteamos la Entropía Generada (Irreversibilidades)
-plt.plot(df['tiempo_hrs'], df['S_gen_kJ_K'], 'b-.', linewidth=1.5, label='$S_{gen}$ (Irreversibilidades)')
+#plt.plot(df['tiempo_hrs'], df['S_gen_kJ_K'], 'b-.', linewidth=1.5, label='$S_{gen}$ (Irreversibilidades)')
 
 # Configuración de formato profesional
-plt.xlabel('Time [h]')
-plt.ylabel('Entropy [kJ/K]')
-plt.title('Análisis de la Segunda Ley - Balance de Entropías')
-plt.legend(loc='best')
-plt.grid(True, linestyle=':', alpha=0.6)
+#plt.xlabel('Time [h]')
+#plt.ylabel('Entropy [kJ/K]')
+#plt.title('Análisis de la Segunda Ley - Balance de Entropías')
+#plt.legend(loc='best')
+#plt.grid(True, linestyle=':', alpha=0.6)
 
-plt.tight_layout()
-plt.show()
+#plt.tight_layout()
+#plt.show()
+
+ruta_salida = directorio_script / 'datos_procesados_estanque.csv'
+
+# Guardamos el DataFrame
+df.to_csv(ruta_salida, 
+          sep=';',           # Separador de columnas
+          decimal=',',       # Separador de decimales (estándar chileno/Excel)
+          index=False,       # Para no guardar la columna de índices (0, 1, 2...)
+          encoding='latin-1' # Para que Excel reconozca bien los caracteres
+)
+
+print(f"Archivo guardado exitosamente en: {ruta_salida}")
